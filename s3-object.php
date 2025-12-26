@@ -4,10 +4,10 @@ require 'vendor/autoload.php';
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
 
-// AWS Credentials
-$bucketName = '';
-$IAM_KEY = '';
-$IAM_SECRET = '';
+// AWS Credentials (read from environment; never hard-code secrets)
+$bucketName = getenv('AWS_BUCKET') ?: 'uploadfilesforverification';
+$IAM_KEY = getenv('AWS_ACCESS_KEY_ID') ?: '';
+$IAM_SECRET = getenv('AWS_SECRET_ACCESS_KEY') ?: '';
 
 try {
     $s3 = S3Client::factory(
@@ -18,7 +18,7 @@ try {
                 'ACL'    => 'public-read'
             ),
             'version' => 'latest',
-            'region'  => 'ap-south-1'
+            'region'  => 'eu-north-1'
         )
     );
 } catch (Exception $e) {

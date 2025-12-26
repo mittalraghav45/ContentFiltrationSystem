@@ -1,0 +1,201 @@
+Detailed command log (chronological)
+
+1) Listed project root contents  
+- Path: C:\Users\mitta\Downloads\AWS\ContentFiltrationSystem  
+- Command: Get-ChildItem  
+- Output: directories AWS Lambda Code, dropzone; files file-upload.php, index.php, lambda.py, README.md, s3-object.php, view_data.php.
+
+2) Read README.md  
+- Path: C:\Users\mitta\Downloads\AWS\ContentFiltrationSystem  
+- Command: Get-Content README.md  
+- Output: short description of AWS content filtration system.
+
+3) Read lambda.py (root copy)  
+- Command: Get-Content lambda.py  
+- Output: Rekognition moderation Lambda code (initially with Source_Bucket/Destinated_Bucket placeholders).
+
+4) Read index.php  
+- Command: Get-Content index.php  
+- Output: Basic Dropzone upload form using dropzone/dist/dropzone.css and dropzone.js; references css/style.css (missing initially).
+
+5) Read file-upload.php  
+- Command: Get-Content file-upload.php  
+- Output: PHP upload handler using AWS S3 client, mime_content_type(), uploads to $bucketName public-read.
+
+6) Read s3-object.php  
+- Command: Get-Content s3-object.php  
+- Output: AWS creds placeholders ($bucketName, $IAM_KEY, $IAM_SECRET), region ap-south-1, loads AWS SDK.
+
+7) Read view_data.php  
+- Command: Get-Content view_data.php  
+- Output: Lists S3 objects in a table using $s3->getIterator and getObjectUrl.
+
+8) Listed AWS Lambda Code folder  
+- Command: Get-ChildItem 'AWS Lambda Code'  
+- Output: contains lambda.py duplicate.
+
+9) Listed dropzone folder  
+- Command: Get-ChildItem dropzone  
+- Output: dist folder and metadata files (bower.json, package.json, etc.).
+
+10) Checked vendor folder (missing)  
+- Command: Get-ChildItem vendor  
+- Output: path not found (vendor not installed yet).
+
+11) Checked composer availability  
+- Command: composer --version  
+- Output: command not recognized.
+
+12) Attempted php -v (PHP missing)  
+- Command: php -v  
+- Output: command not recognized.
+
+13) Searched and installed PHP via winget  
+- Command: winget install --id PHP.PHP -e --source winget (rejected initially)  
+- Later search: winget search --source winget php --accept-source-agreements  
+- Output: list of PHP versions (8.1–8.5).  
+- Install: winget install --id PHP.PHP.8.3 -e --accept-source-agreements --accept-package-agreements  
+- Output: downloaded/extracted PHP 8.3.29 portable; PATH note.
+
+14) Located php.exe  
+- Command: Get-ChildItem -Path 'C:\Program Files','C:\Program Files (x86)','C:\Users\mitta\AppData\Local\Programs' -Recurse -Filter php.exe  
+- Output: found php.exe at C:\Users\mitta\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.3_Microsoft.Winget.Source_8wekyb3d8bbwe.
+
+15) Verified php in session  
+- Command: set PATH to winget PHP dir; php -v  
+- Output: PHP 8.3.29 (cli) ZTS VC++ 2019 x64.
+
+16) Tried to install Composer via winget (not found)  
+- Command: winget install --id Composer.Composer …  
+- Output: no package found.
+
+17) Downloaded Composer installer manually  
+- Command: php -r "copy('https://getcomposer.org/installer','composer-setup.php');"  
+- Output: failed (HTTPS wrapper missing).  
+- Command: Invoke-WebRequest -Uri https://getcomposer.org/installer -OutFile composer-setup.php  
+- Output: downloaded.
+
+18) Composer install failed due to missing openssl  
+- Command: php composer-setup.php  
+- Output: error: openssl extension missing.
+
+19) Enabled openssl in php.ini  
+- Commands: copy php.ini-development to php.ini; set extension_dir; enable openssl.  
+- Output: openssl still not loading until extension_dir fixed, then openssl loaded (php -r "echo extension_loaded('openssl')").
+
+20) Installed Composer  
+- Command: php composer-setup.php  
+- Output: Composer 2.9.2 installed to composer.phar.
+- Command: php composer.phar --version  
+- Output: Composer version displayed.
+
+21) Installed AWS SDK PHP dependency  
+- Command: php composer.phar require aws/aws-sdk-php (run twice; first timed out mid-install, second completed).  
+- Output: composer.json/lock created; vendor/ populated; final upgrade to 3.369.3.
+
+22) Enabled fileinfo extension (fix mime_content_type)  
+- Command: edit php.ini to uncomment extension=fileinfo; restart server.  
+- Verification: php -r "echo extension_loaded('fileinfo')" → fileinfo on.
+
+23) Managed PHP built-in server  
+- Commands: Start-Process php.exe -S localhost:8000 -WorkingDirectory project; Stop-Process -Name php; repeated restarts.  
+- Output: server running with noted PIDs (e.g., 16132, 22912, 32188).
+
+24) Updated AWS credentials in s3-object.php  
+- Edited $bucketName to uploadfilesforverification, $IAM_KEY and $IAM_SECRET to provided values, region eu-north-1.
+
+25) Updated lambda.py buckets  
+- Changed Source_Bucket to uploadfilesforverification and destination to uploadfilesforverification-flagged.
+
+26) AWS setup actions (guided and/or user-driven)  
+- Buckets created: uploadfilesforverification and uploadfilesforverification-flagged in eu-north-1.  
+- IAM: created user with S3 list/get/put on source; access key/secret captured.  
+- Lambda: deployed image-moderation-function (Python 3.14, 512 MB, 15s) with S3 read/delete (source), put (dest), Rekognition DetectModerationLabels, CloudWatch Logs permissions.  
+- S3 trigger: ObjectCreated:* on uploadfilesforverification to the Lambda.
+
+27) UI redesign and styling  
+- Added css/style.css with responsive dark gradient theme, cards, tables, and Dropzone styling.  
+- Updated index.php with hero, bucket pills, styled Dropzone, and navigation.  
+- Updated view_data.php with styled table, navigation, empty state, and shared styles.
+
+28) Diagnostics and fixes observed in server output  
+- favicon 404 (harmless).  
+- Fatal error: mime_content_type undefined → resolved by enabling fileinfo.  
+- PATH/openssl issues resolved as above.
+
+
+Project explanation (for technical and non-technical readers)
+
+What it is  
+A simple web app to upload files to Amazon S3. Each upload triggers an AWS Lambda function that uses Amazon Rekognition to detect inappropriate content. If flagged, the file is moved to a separate “flagged” bucket and removed from the main bucket.
+
+Components  
+- Frontend/Upload UI (index.php): Drag-and-drop (Dropzone) upload form.  
+- Upload handler (file-upload.php): Receives files, uses AWS PHP SDK to put objects into the source S3 bucket.  
+- AWS bootstrap (s3-object.php): Initializes AWS S3 client with your credentials, bucket name, and region.  
+- Viewer (view_data.php): Lists objects currently in the source bucket with size and a link to open.  
+- Lambda (lambda.py): Runs on S3 ObjectCreated events; calls Rekognition DetectModerationLabels. If labels are returned, copies the object to the flagged bucket and deletes it from the source. Logs to CloudWatch.
+
+AWS resources used  
+- S3 buckets: uploadfilesforverification (source), uploadfilesforverification-flagged (flagged).  
+- IAM: user for PHP uploader with minimal S3 permissions; Lambda execution role with S3, Rekognition, and CloudWatch Logs permissions.  
+- Lambda: image-moderation-function in eu-north-1 with an S3 trigger on ObjectCreated:*.
+
+How it works end-to-end  
+1) User opens the upload page and drops files.  
+2) file-upload.php uploads each file to the source S3 bucket via AWS SDK.  
+3) S3 event triggers Lambda. Lambda calls Rekognition to check for moderation labels.  
+4) If flagged: Lambda copies the file to the flagged bucket and deletes it from the source. If clean: it stays in the source bucket.  
+5) view_data.php lists the current contents of the source bucket and links to open files directly from S3.
+
+Local setup summary  
+- PHP 8.3 (portable) installed; php.ini configured with openssl and fileinfo.  
+- Composer installed; AWS SDK added via composer require aws/aws-sdk-php.  
+- PHP server run with: php -S localhost:8000 (from project root).
+
+Security note  
+- An AWS access key/secret were hard-coded in s3-object.php for setup. Rotate the key and move to environment variables before committing or publishing. Include /vendor/ in .gitignore; keep composer.lock tracked.***
+
+Integrated AWS build guide (chronological narrative)
+
+Project overview (AWS side)  
+- Purpose: Automatically moderate uploaded images. Uploads go to S3; Lambda calls Rekognition to detect inappropriate content; flagged images move to a flagged bucket; safe images stay in the main bucket. Uses S3, Lambda, Rekognition, IAM, and CloudWatch.
+
+Phase 1: IAM roles and permissions  
+- Lambda execution role for logs: Created role in IAM (AWS service → Lambda) with policy AWSLambdaBasicExecutionRole to allow logs:CreateLogGroup, CreateLogStream, PutLogEvents. Role name: lambda-execution-role.  
+- S3 access role for Lambda: Created role lambda-s3-file-verification-role (trusted entity Lambda). Added inline policy with s3:GetObject/s3:DeleteObject on arn:aws:s3:::uploadfilesforverification/* and s3:PutObject on arn:aws:s3:::uploadfilesforverification-flagged/*. Attached the inline policy.  
+- Rekognition role: Created role lambda-rekognition-role (trusted entity Lambda) with inline policy allowing rekognition:DetectModerationLabels on "*".
+
+Phase 2: Lambda function creation  
+- Created Lambda function image-moderation-function in eu-north-1 (Python 3.14, x86_64).  
+- Handler: lambda_function.lambda_handler; memory 512 MB; timeout 15s.  
+- Attached execution role (lambda-execution-role) and then attached S3 and Rekognition policies.  
+- Deployed moderation code (lambda.py) that reads S3 event, calls Rekognition, copies flagged images to uploadfilesforverification-flagged, deletes from source, logs to CloudWatch.
+
+Phase 3: S3 trigger configuration  
+- Added S3 trigger on bucket uploadfilesforverification for event type s3:ObjectCreated:* pointing to image-moderation-function. Verified trigger in Lambda overview.
+
+Phase 4: Testing and debugging  
+- First test revealed AccessDenied due to missing s3:ListBucket; policy updated to add s3:ListBucket on both buckets.  
+- Safe image test: stays in source bucket; CloudWatch logs show “Image is safe.”  
+- Flagged image test: copied to uploadfilesforverification-flagged and deleted from source; CloudWatch logs confirm copy/delete.
+
+Current AWS resources  
+- Buckets: uploadfilesforverification (source), uploadfilesforverification-flagged (flagged), region eu-north-1.  
+- Roles/policies: lambda-execution-role (logs), lambda-s3-file-verification-role (S3 access inline policy), lambda-rekognition-role (Rekognition inline policy).  
+- Lambda: image-moderation-function (Python 3.14, 512 MB, 15s) with S3 trigger on ObjectCreated:*.
+
+Operational flow (end-to-end)  
+1) User uploads via PHP UI → file-upload.php puts object into source bucket.  
+2) S3 fires ObjectCreated event → Lambda runs.  
+3) Lambda calls Rekognition DetectModerationLabels.  
+4a) If labels found: copy to flagged bucket; delete from source; log actions.  
+4b) If no labels: leave in source; log “Image is safe.”  
+5) view_data.php lists objects currently in the source bucket with links to open.
+
+Next steps for production hardening  
+- Rotate the hard-coded AWS key and move to environment variables in s3-object.php.  
+- Add error/alerting (e.g., SNS) for failed Lambda runs or flagged content.  
+- Consider an approval/review UI for flagged items.  
+- Add CORS rules on S3 if hosting UI remotely; add auth if exposed publicly.  
+- Add logging/metrics dashboards in CloudWatch.  

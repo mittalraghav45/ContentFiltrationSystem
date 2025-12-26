@@ -1,0 +1,14 @@
+# Dependency directories
+/vendor/
+
+# Local tooling
+/composer.phar
+/composer-setup.php
+
+# Environment and editor files
+.env
+.env.local
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
