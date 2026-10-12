@@ -1,26 +1,15 @@
 <?php
-require 'vendor/autoload.php';
+declare(strict_types=1);
 
-use Aws\S3\S3Client;
-use Aws\S3\Exception\S3Exception;
-
-// AWS Credentials (read from environment; never hard-code secrets)
-$bucketName = getenv('AWS_BUCKET') ?: 'uploadfilesforverification';
-$IAM_KEY = getenv('AWS_ACCESS_KEY_ID') ?: '';
-$IAM_SECRET = getenv('AWS_SECRET_ACCESS_KEY') ?: '';
-
-try {
-    $s3 = S3Client::factory(
-        array(
-            'credentials' => array(
-                'key' => $IAM_KEY,
-                'secret' => $IAM_SECRET,
-                'ACL'    => 'public-read'
-            ),
-            'version' => 'latest',
-            'region'  => 'eu-north-1'
-        )
-    );
-} catch (Exception $e) {
-    die("Error: " . $e->getMessage());
+function storageClient(): \Aws\S3\S3Client
+{
+    if (!is_file(__DIR__ . '/vendor/autoload.php')) {
+        throw new RuntimeException('Dependencies missing. Run composer install first.');
+    }
+    require_once __DIR__ . '/vendor/autoload.php';
+    if (!getenv('AWS_BUCKET') || !getenv('AWS_REGION')) {
+        throw new RuntimeException('Set AWS_BUCKET and AWS_REGION before starting the server.');
+    }
+    // Default credential chain supports environment, profiles and IAM roles/session tokens.
+    return new \Aws\S3\S3Client(['version' => 'latest', 'region' => getenv('AWS_REGION')]);
 }
